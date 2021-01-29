@@ -7,28 +7,47 @@ Created on Mon Jan 25 20:14:31 2021
 
 
 Details about the models are below:
-
-
-Name	# Params	Top-1  Acc.	Pretrained?
-efficientnet-b0	    5.3M	76.3	✓
-efficientnet-b1	    7.8M	78.8	✓
-efficientnet-b2	    9.2M	79.8	✓
-efficientnet-b3	    12M	    81.1	✓
-efficientnet-b4	    19M	    82.6	✓
-efficientnet-b5	    30M	    83.3	✓
-efficientnet-b6	    43M	    84.0	✓
-efficientnet-b7	    66M	    84.4	✓
-
 https://github.com/lukemelas/EfficientNet-PyTorch
+
+
+Name	          #Params	Top-1-Acc.	Pretrained
+----------------------------------------------------
+efficientnet-b0	    5.3M	 76.3	        ✓
+efficientnet-b1	    7.8M	 78.8	        ✓
+efficientnet-b2	    9.2M	 79.8	        ✓
+efficientnet-b3	    12M	     81.1	        ✓
+efficientnet-b4	    19M	     82.6	        ✓
+efficientnet-b5	    30M	     83.3	        ✓
+efficientnet-b6	    43M	     84.0	        ✓
+efficientnet-b7	    66M	     84.4	        ✓
+----------------------------------------------------
+
+There is also a new, large efficientnet-b8 pretrained model that is only available in advprop form. When using these models, replace ImageNet preprocessing code as follows:
+
+if advprop:  # for models using advprop pretrained weights
+    normalize = transforms.Lambda(lambda img: img * 2.0 - 1.0)
+else:
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+
+
 
 """
 
 import torch.nn as nn
 from efficientnet_pytorch import EfficientNet
 
+
+''' 
+
+
+'''
+
 class DizygoticNet(nn.Module):
 
-    def __init__(self, num_classes, model_name1='efficientnet-b0', 
+    def __init__(self, num_classes, 
+                 model_name1='efficientnet-b0', 
                  model_name2='efficientnet-b0',
                  pre_trained1 = True,
                  pre_trained2= True):
@@ -38,6 +57,7 @@ class DizygoticNet(nn.Module):
         if pre_trained1:
             self.network1 = EfficientNet.from_pretrained(model_name1, 
                              num_classes= num_classes, include_top=True) # in_channels=1)
+            # model = EfficientNet.from_pretrained("efficientnet-b0", advprop=True)
         else:
             self.network1 = EfficientNet.from_name(model_name1, 
                              num_classes= num_classes, include_top=True) # in_channels=1)
@@ -57,6 +77,10 @@ class DizygoticNet(nn.Module):
         return out1+out2
     
     # A model with the final layers
+
+
+
+
 
 
 # https://github.com/lukemelas/EfficientNet-PyTorch/pull/208

@@ -88,9 +88,9 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 parser.add_argument("--HPC-run", action='store_true', help="if 1, sets to true if running on HPC: default is 0 which reads to False")
-parser.add_argument("--redirect-std-to-file", default=False, type=lambda x: (str(x).lower() == 'true'),  help="True/False - default False; if True sets all console output to file")
+parser.add_argument("--redirect-std-to-file", default=True, type=lambda x: (str(x).lower() == 'true'),  help="True/False - default False; if True sets all console output to file")
 parser.add_argument("--experiment-name", type=str, default='results', help="name of the folder inside saved_models")
-parser.add_argument('--use_dizygotic', action='store_true', # store_true creates a default value of False. https://stackoverflow.com/questions/8203622/argparse-store-false-if-unspecified
+parser.add_argument('--dizygotic', action='store_true', # store_true creates a default value of False. https://stackoverflow.com/questions/8203622/argparse-store-false-if-unspecified
                     help='if true, dizygotic net will be used, else, single net will be used')
 
 
@@ -105,7 +105,7 @@ def main():
     if platform.system() == 'Windows': 
         args.workers= 0 # change to 0 if there's a problem
     # args.epochs=3 # used for debugging
-    args.batch_size = 4
+    # args.batch_size = 16
     args.print_freq = 200
     args.arch = 'effnet'
     
@@ -338,39 +338,31 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     model.train()
 
     end = time.time()
-    for i, (image_p, image_n, colors, labels, target) in enumerate(train_loader):
-        # images, target = items  # to be used with CIFAR data, ImageNet, etc
-        
-        # plt.imshow(  image_p[1,:].permute(1, 2, 0)  ); plt.show() # to see the image
+    for i, (image_p, image_n, colors, labels, num_colors) in enumerate(train_loader):
+        # images, target = items  # to be used with CIFAR data         
+        images = image_p
+        target= num_colors
+        # plt.imshow(  images[1,:].permute(1, 2, 0)  ); plt.show() # to see the image
         
         # measure data loading time
         data_time.update(time.time() - end)
-        
-        if args.gpu is not None:                        
-            if args.use_dizygotic:
-                image_n = image_n.cuda(args.gpu, non_blocking=True)
-                image_p = image_p.cuda(args.gpu, non_blocking=True)        
-            else:
-                image_p = image_p.cuda(args.gpu, non_blocking=True)      
-                
-        # compute output
-        if args.use_dizygotic:
-            output = model(image_p, image_n) 
-        else: 
-            output = model(image_p) 
-        
-        
+
+        if args.gpu is not None:
+            images = images.cuda(args.gpu, non_blocking=True)
         if torch.cuda.is_available():
             target = target.cuda(args.gpu, non_blocking=True)
 
+        # compute output
+        output = model(images)
+        # output = model(images, -images)  # changed by Rawi
         loss = criterion(output, target)
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
-        # x_size = image_p.size(0) 
-        losses.update(loss.item(), args.batch_size) # x_size is batch_size
-        top1.update(acc1[0], args.batch_size)
-        top5.update(acc5[0], args.batch_size)
+        img_x_size = images.size(0)
+        losses.update(loss.item(), img_x_size)
+        top1.update(acc1[0], img_x_size)
+        top5.update(acc5[0], img_x_size)
         
 
         # compute gradient and do SGD step
